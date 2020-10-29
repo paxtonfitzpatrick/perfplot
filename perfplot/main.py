@@ -11,7 +11,6 @@ from rich.console import Console
 from rich.progress import Progress
 from rich.table import Table
 
-matplotlib.style.use(dufte.style)
 
 # Orders of Magnitude for SI time units in {unit: magnitude} format
 si_time = {
@@ -47,6 +46,26 @@ def _auto_time_unit(min_time_ns):
     return time_unit
 
 
+def _set_tmp_plotstyle(plot_method):
+    """
+    decorator for `PerfplotData.plot` that allows perfplot to use a
+    given style without altering the matplotlib rcParams and affecting
+    all other non-perfplot plots
+    """
+    def plot_wrapper(self, *args, **kwargs):
+        # will always be a keyword argument, defaults to 'dufte'
+        print(kwargs)
+        plot_style = kwargs.get('style')
+        print(f'PLOT_STYLE IS {plot_style}')
+        if plot_style == 'dufte':
+            plot_style = dufte.style
+
+        with matplotlib.style.context(plot_style, after_reset=True):
+            return plot_method(self, *args, **kwargs)
+
+    return plot_wrapper
+
+
 class PerfplotData:
     def __init__(
         self,
@@ -62,12 +81,14 @@ class PerfplotData:
         self.labels = labels
         self.xlabel = xlabel
 
+    @_set_tmp_plotstyle
     def plot(  # noqa: C901
         self,
         time_unit="s",
         relative_to=None,
         logx="auto",
         logy="auto",
+        style='dufte',
     ):
         if logx == "auto":
             # Check if the x values are approximately equally spaced in log
@@ -318,6 +339,7 @@ def show(
     relative_to=None,
     logx="auto",
     logy="auto",
+    style='dufte',
     **kwargs,
 ):
     out = bench(*args, **kwargs)
@@ -326,6 +348,7 @@ def show(
         relative_to=relative_to,
         logx=logx,
         logy=logy,
+        style=style,
     )
 
 
